@@ -90,6 +90,12 @@
   <ItemGroup>
     <ClCompile Include="Smrecek_Othello.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="game\player1-stdin.txt" />
+    <Text Include="game\player1-stdout.txt" />
+    <Text Include="game\player2-stdin.txt" />
+    <Text Include="game\player2-stdout.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
