@@ -4,6 +4,7 @@
 #include <fstream>
 #include <algorithm>
 #include <regex>
+#include <time.h>
 
 /// <summary>
 /// https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
@@ -119,16 +120,6 @@ int check_input_state(const std::string& state)
     return 0;
 }
 
-int solve(const std::string& state, std::string& result)
-{
-    state;
-    result;
-
-    return 8; // neexistuje riesenie
-
-    //return 0;
-}
-
 std::vector<std::vector<char>> game_field_2d(const std::string& game_state)
 {
     std::vector<std::vector<char>> field;
@@ -146,6 +137,19 @@ std::vector<std::vector<char>> game_field_2d(const std::string& game_state)
     return field;
 }
 
+std::string game_field_to_1d(const std::vector<std::vector<char>>& field)
+{
+    std::string state{ "" };
+    for (size_t i = 0; i < field.size(); i++)
+    {
+        for (size_t j = 0; j < field.size(); j++)
+        {
+            state.push_back(field[i][j]);
+        }
+    }
+    return state;
+}
+
 void print_game_field(const std::vector<std::vector<char>>& field)
 {
     for (size_t i = 0; i < field.size(); i++)
@@ -159,8 +163,10 @@ void print_game_field(const std::vector<std::vector<char>>& field)
     std::cout << std::endl;
 }
 
-void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, const std::string& result)
+int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, const std::string& result)
 {
+    int flipped = 0;
+
     int letter = result[0] - 'A';
     int number = result[1] - '1';
 
@@ -180,6 +186,8 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
 
     field[number][letter] = bot_symbol;
 
+    bool out = false;
+
     // number + zmena po stlpcoxh
     for (int i = number + 1; i < 8; i++)
     {
@@ -189,9 +197,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
         }
         if (field[i][letter] == bot_symbol)
         {
-            for (int j = number + 1; j <= i; j++)
+            if (i == number + 1)
+            {
+                break;
+            }
+            for (int j = number + 1; j < i; j++)
             {
                 field[j][letter] = bot_symbol;
+                flipped++;
+                if(out) std::cout << "1flipped " << j << " " << letter << std::endl;
             }
             break;
         }
@@ -206,9 +220,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
         }
         if (field[i][letter] == bot_symbol)
         {
-            for (int j = number - 1; j >= i; j--)
+            if (i == number - 1)
+            {
+                break;
+            }
+            for (int j = number - 1; j > i; j--)
             {
                 field[j][letter] = bot_symbol;
+                flipped++;
+                if (out) std::cout << "2flipped " << j << " " << letter << std::endl;
             }
             break;
         }
@@ -223,9 +243,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
         }
         if (field[number][i] == bot_symbol)
         {
-            for (int j = letter + 1; j <= i; j++)
+            if (i == letter + 1)
+            {
+                break;
+            }
+            for (int j = letter + 1; j < i; j++)
             {
                 field[number][j] = bot_symbol;
+                flipped++;
+                if (out) std::cout << "3flipped " << number << " " << j << std::endl;
             }
             break;
         }
@@ -240,10 +266,17 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
         }
         if (field[number][i] == bot_symbol)
         {
-            for (int j = letter - 1; j >= i; j--)
+            if (i == letter - 1)
+            {
+                break;
+            }
+            for (int j = letter - 1; j > i; j--)
             {
                 field[number][j] = bot_symbol;
+                flipped++;
+                if (out) std::cout << "4flipped " << number << " " << j << std::endl;
             }
+            break;
         }
     }
 
@@ -261,9 +294,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
             }
             if (field[dia_num][dia_let] == bot_symbol)
             {
-                for (int j = 1; j <= i; j++)
+                //if ((dia_num == number + i && dia_let == letter + i))
+                //{
+                //    break;
+                //}
+                for (int j = 1; j < i; j++)
                 {
                     field[number + j][letter + j] = bot_symbol;
+                    flipped++;
+                    if (out) std::cout << "5flipped " << number + j << " " << letter + j << std::endl;
                 }
                 break;
             }
@@ -284,9 +323,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
             }
             if (field[dia_num][dia_let] == bot_symbol)
             {
-                for (int j = 1; j <= i; j++)
+                //if (dia_num == number + i && dia_let == letter - i)
+                //{
+                //    break;
+                //}
+                for (int j = 1; j < i; j++)
                 {
                     field[number + j][letter - j] = bot_symbol;
+                    flipped++;
+                    if (out) std::cout << "6flipped " << number + j << " " << letter - j << std::endl;
                 }
                 break;
             }
@@ -307,9 +352,15 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
             }
             if (field[dia_num][dia_let] == bot_symbol)
             {
-                for (int j = 1; j <= i; j++)
+                //if (dia_num == number - i && dia_let == letter + i)
+                //{
+                //    break;
+                //}
+                for (int j = 1; j < i; j++)
                 {
                     field[number - j][letter + j] = bot_symbol;
+                    flipped++;
+                    if (out) std::cout << "7flipped " << number - j << " " << letter + j << std::endl;
                 }
                 break;
             }
@@ -330,14 +381,50 @@ void apply_result(const bool bot_black, std::vector<std::vector<char>>& field, c
             }
             if (field[dia_num][dia_let] == bot_symbol)
             {
-                for (int j = 1; j <= i; j++)
+                //if (dia_num == number - i && dia_let == letter - i)
+                //{
+                //    break;
+                //}
+                for (int j = 1; j < i; j++)
                 {
                     field[number - j][letter - j] = bot_symbol;
+                    flipped++;
+                    if (out) std::cout << "8flipped " << number - j << " " << letter - j << std::endl;
                 }
                 break;
             }
         }
     }
+
+    return flipped;
+}
+
+std::vector<std::string> possible_moves_generator(const bool bot_black, const std::vector<std::vector<char>>& field)
+{
+    std::vector<std::string> possible_moves;
+    bot_black;
+
+    for (char i = 0; i < 8; i++)
+    {
+        for (char j = 0; j < 8; j++)
+        {
+            if (field[i][j] == '-')
+            {
+                std::vector<std::vector<char>> test_field = field;
+                char a = i + '1';
+                char b = j + 'A';
+                std::string test_move{ b, a };
+                
+                if (apply_result(bot_black, test_field, test_move))
+                {
+                    possible_moves.push_back(test_move);
+                }
+            }
+        }
+    }
+
+    
+    return possible_moves;
 }
 
 void test_place_two(const std::string& test_game_state, const bool bot_black, std::string one, std::string two)
@@ -352,13 +439,36 @@ void test_place_two(const std::string& test_game_state, const bool bot_black, st
     std::cout << "+++++++++++++++++++++" << std::endl;
 }
 
+void test_place(const std::string& test_game_state, const bool bot_black, std::string one)
+{
+    std::cout << one << " " << std::endl;
+    std::vector<std::vector<char>> field = game_field_2d(test_game_state);
+    print_game_field(field);
+    int number_of_flips = apply_result(bot_black, field, one);
+    std::cout << "number_of_flips " << number_of_flips << std::endl;
+    print_game_field(field);
+    std::cout << "+++++++++++++++++++++" << std::endl;
+}
+
 bool random_player(std::string& command, bool& random_start, const std::string& result, std::string& random_game_state)
 {
-    std::string bot_color{ "B" };
-    bool bot_black = true;
+    bool bot_black = false;
 
-    std::string random_color{ "W" };
-    bool random_black = false;
+    std::string bot_color{ "" };
+    std::string random_color{ "" };
+    bool random_black = !bot_black;
+
+    if (bot_black)
+    {
+        bot_color = "B";
+        random_color = "W";
+    }
+    else
+    {
+        bot_color = "W";
+        random_color = "B";
+    }
+
 
 
     std::string random_time_str{ "10" };
@@ -370,56 +480,98 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
 
     if (!random_start)
     {
-        command = start_command + delimeter_command + random_color + delimeter_command + random_time_str;
+        command = start_command + delimeter_command + bot_color + delimeter_command + random_time_str;
         random_start = true;
-        random_game_state = "----------O------OOO------O-------------------------------------";
+        random_game_state = "---------------------------OX------XO---------------------------";
+        return true;
+    }
+
+    if (result == "1")
+    {
+        command = move_command + delimeter_command + random_game_state;
+        return true;
+    }
+    else
+    {
+        std::vector<std::vector<char>> field = game_field_2d(random_game_state);
+        int flipped_bot = apply_result(bot_black, field, result);
+        flipped_bot;
+        std::vector<std::string> possible_moves = possible_moves_generator(random_black, field);
+        if (possible_moves.size() == 0)
+        {
+            command = "STOP";
+            return true;
+        }
+        int flipped_random = apply_result(random_black, field, possible_moves[rand() % possible_moves.size()]);
+        //std::cout << "random placing " << possible_moves[0] << std::endl;
+        flipped_random;
+        random_game_state = game_field_to_1d(field);
+        command = move_command + delimeter_command + random_game_state;
+        //std::cout << "++++++++++++" << flipped_bot << " " << flipped_random << std::endl;
         return true;
     }
 
     // chyba free
     result;
-    random_game_state;
+    bot_black;
     random_black;
     random_color;
     random_time;
     random_time_str;
-    start_command;
     move_command;
-    delimeter_command;
     //chyba free
 
-    std::vector<std::vector<char>> field = game_field_2d(random_game_state);
+    
     //print_game_field(field);
+    
 
+    //test_place(random_game_state, bot_black, "E3");
 
     //// C1 C5
-    //test_place_two(random_game_state, bot_black, "C1", "C5");
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "C1", "C5");
     //// C5 C1
-    //test_place_two(random_game_state, bot_black, "C5", "C1");
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "C5", "C1");
     //// A3 E3
-    //test_place_two(random_game_state, bot_black, "A3", "E3");
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "A3", "E3");
     //// E3 A3
-    //test_place_two(random_game_state, bot_black, "E3", "A3");
-
-    // B2 D4
-    test_place_two(random_game_state, bot_black, "B2", "D4");
-    // D4 B2
-    test_place_two(random_game_state, bot_black, "D4", "B2");
-    // B4 D2
-    test_place_two(random_game_state, bot_black, "B4", "D2");
-    // D2 B4
-    test_place_two(random_game_state, bot_black, "D2", "B4");
-
-    // Multiple actions
-    test_place_two("------------------XOO-----OOO-----OO----------------------------", bot_black, "E2", "E5");
-
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "E3", "A3");
+    //// B2 D4
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "B2", "D4");
+    //// D4 B2
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "D4", "B2");
+    //// B4 D2
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "B4", "D2");
+    //// D2 B4
+    //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "D2", "B4");
+    //// Multiple actions
+    //test_place_two("------------------XOO-----OOO-----OO----------------------------", bot_black, "E2", "E5");
+    //// Corners
+    //test_place_two("X--------O-----O--OOO--O--OOO--O--OOO--O-----O-O------OOXOOOOOO-", bot_black, "H1", "H8");
 
     return false;
+}
+
+int solve(const bool black, const std::string& state, std::string& result)
+{
+    std::vector<std::vector<char>> field = game_field_2d(state);
+
+    std::vector<std::string> possible_moves = possible_moves_generator(black, field);
+
+    if (possible_moves.size() == 0)
+    {
+        return 8;
+    }
+
+    result = possible_moves[rand() % possible_moves.size()];
+
+    return 0;
 }
 
 // O - white, X - black
 int main()
 {
+    srand(unsigned int(time(NULL)));
+
     std::string command;
     std::string result;
 
@@ -432,21 +584,20 @@ int main()
     black;
     time;
     command_tokens;
-    //std::vector<std::string> test_commands{"START B 30", "MOVE ---------------------------OX------XX-------X-------------------"};
     bool random_start = false;
     std::string random_game_state{ "" };
 
     //while (std::getline(std::cin, command))
     while (random_player(command, random_start, result, random_game_state))
-    //for (std::string command : test_commands)
     {
         //std::string result;
         // process the command and fill result
         command_tokens = tokenize(command);
 
         for (const auto& str : command_tokens) {
-            std::cout << "------ " << str << std::endl;
+            std::cout << str << " ";
         }
+        std::cout << std::endl;
 
         if (!started)
         {
@@ -455,7 +606,7 @@ int main()
             {
                 return return_start;
             }
-            std::cout << 1 << std::endl;
+            result = "1";
         }
         else
         {
@@ -464,7 +615,12 @@ int main()
                 int input_state = check_input_state(command_tokens[1]);
                 if (input_state == 0)
                 {
-                    solve(command_tokens[1], result);
+                    int return_solve = solve(black, command_tokens[1], result);
+                    return_solve;
+                    //if (return_solve != 0)
+                    //{
+                    //    return return_solve;
+                    //}
                 }
                 else
                 {
@@ -473,6 +629,40 @@ int main()
             }
             else if (command_tokens[0] == "STOP" && command_tokens.size() == 1)
             {
+                int blackspots = 0;
+                int whitespots = 0;
+                int freespots = 0;
+
+                for (size_t i = 0; i < random_game_state.size(); i++)
+                {
+                    if (random_game_state[i] == 'X')
+                    {
+                        blackspots++;
+                    }
+                    if (random_game_state[i] == 'O')
+                    {
+                        whitespots++;
+                    }
+                    if (random_game_state[i] == '-')
+                    {
+                        freespots++;
+                    }
+                }
+
+                std::cout << "Black: " << blackspots << " White: " << whitespots << " Free: " << freespots << std::endl << "Winner: ";
+                if (blackspots > whitespots)
+                {
+                    std::cout << "Black" << std::endl;
+                }
+                if (whitespots > blackspots)
+                {
+                    std::cout << "White" << std::endl;
+                }
+                if (blackspots == whitespots)
+                {
+                    std::cout << "Tie" << std::endl;
+                }
+
                 return 0;
             }
             else
@@ -482,6 +672,9 @@ int main()
         }
         std::cout << result << std::endl;  
     }
+
+    
+
 
     return 1000;
 }
