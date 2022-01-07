@@ -5,9 +5,12 @@
 #include <algorithm>
 #include <regex>
 #include <time.h>
+#include <chrono>
+#include <thread>
 
 std::string maxPlayer_string{ " " };
 std::string minPlayer_string{ " " };
+uint64_t final_time = 0;
 
 void set_global(std::string maximizing)
 {
@@ -78,7 +81,7 @@ std::vector<std::string> tokenize(std::string& command)
 
     int64_t pos = 0;
     command = trim(command);
-    while ((pos = command.find(delimiter)) != std::string::npos) {
+    while (uint64_t(pos = command.find(delimiter)) != std::string::npos) {
         tokens.push_back(command.substr(0, pos));
         command.erase(0, pos + delimiter.length());
         command = trim(command);
@@ -92,6 +95,7 @@ int check_start(const std::vector<std::string>& command_tokens, bool& started, b
 {
     if (command_tokens.size() != 3)
     {
+        std::clog << "Start error" << std::endl;
         return 1;
     }
     if (command_tokens[0] == "START")
@@ -100,6 +104,7 @@ int check_start(const std::vector<std::string>& command_tokens, bool& started, b
     }
     else
     {
+        std::clog << "Start error" << std::endl;
         return 2;
     }
 
@@ -113,6 +118,7 @@ int check_start(const std::vector<std::string>& command_tokens, bool& started, b
     }
     else
     {
+        std::clog << "Start error" << std::endl;
         return 3;
     }
 
@@ -123,6 +129,7 @@ int check_start(const std::vector<std::string>& command_tokens, bool& started, b
     }
     catch (const std::exception&)
     {
+        std::clog << "Start error" << std::endl;
         return 4;
     }
 
@@ -132,6 +139,7 @@ int check_start(const std::vector<std::string>& command_tokens, bool& started, b
     }
     else
     {
+        std::clog << "Start error" << std::endl;
         return 5;
     }
 
@@ -142,6 +150,7 @@ int check_input_state(const std::string& state)
 {
     if (state.length() != 64)
     {
+        std::clog << "Move error" << std::endl;
         return 6;
     }
     
@@ -149,6 +158,7 @@ int check_input_state(const std::string& state)
 
     if (found != std::string::npos)
     {
+        std::clog << "Move error" << std::endl;
         return 7;
     }
 
@@ -237,8 +247,8 @@ void print_game_field(const std::vector<std::vector<char>>& field)
         }
         std::cout << std::endl;
     }
-    std::cout << std::endl;
     print_evaluation(game_field_to_1d(field));
+    std::cout << std::endl;
 }
 
 bool check_result(const std::string& result)
@@ -277,17 +287,14 @@ int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, co
     int number = result[1] - '1';
 
     char bot_symbol = '-';
-    char opponent_symbol = '-';
 
     if (bot_black)
     {
         bot_symbol = 'X';
-        opponent_symbol = 'O';
     }
     else
     {
         bot_symbol = 'O';
-        opponent_symbol = 'X';
     }
 
     field[number][letter] = bot_symbol;
@@ -508,7 +515,6 @@ int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, co
 std::vector<std::tuple<std::string, int>> possible_moves_generator(const bool bot_black, const std::vector<std::vector<char>>& field)
 {
     std::vector<std::tuple<std::string, int>> possible_moves;
-    bot_black;
 
     for (char i = 0; i < 8; i++)
     {
@@ -573,8 +579,7 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         random_color = "B";
     }
 
-    std::string random_time_str{ "10" };
-    int32_t random_time = 10;
+    std::string random_time_str{ "1" };
 
     std::string start_command{ "START" };
     std::string move_command{ "MOVE" };
@@ -585,19 +590,20 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         command = start_command + delimeter_command + bot_color + delimeter_command + random_time_str;
         random_start = true;
         random_game_state = "---------------------------OX------XO---------------------------";
+        std::cout << command << std::endl;
         return true;
     }
 
     if (result == "1")
     {
         command = move_command + delimeter_command + random_game_state;
+        std::cout << command << std::endl;
         return true;
     }
     else
     {
         std::vector<std::vector<char>> field = game_field_2d(random_game_state);
-        int flipped_bot = apply_result(bot_black, field, result);
-        flipped_bot;
+        apply_result(bot_black, field, result);
         print_game_field(field);
         std::vector<std::tuple<std::string, int>> possible_moves = possible_moves_generator(random_black, field);
         if (possible_moves.size() == 0)
@@ -608,26 +614,15 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         std::string move;
         int flip;
         std::tie(move, flip) = possible_moves[rand() % possible_moves.size()];
-        int flipped_random = apply_result(random_black, field, move);
+        apply_result(random_black, field, move);
         std::cout << "random placing " << move << std::endl;
-        flipped_random;
         print_game_field(field);
         random_game_state = game_field_to_1d(field);
         command = move_command + delimeter_command + random_game_state;
         //std::cout << "++++++++++++" << flipped_bot << " " << flipped_random << std::endl;
+        std::cout << command << std::endl;
         return true;
     }
-
-    // chyba free
-    result;
-    bot_black;
-    random_black;
-    random_color;
-    random_time;
-    random_time_str;
-    move_command;
-    //chyba free
-
     
     //print_game_field(field);
     
@@ -658,14 +653,15 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
     return false;
 }
 
-int solve_random(const bool black, const std::string& state, std::string& result)
+int solve_random(const std::string& state, std::string& result)
 {
     std::vector<std::vector<char>> field = game_field_2d(state);
 
-    std::vector<std::tuple<std::string, int>> possible_moves = possible_moves_generator(black, field);
+    std::vector<std::tuple<std::string, int>> possible_moves = possible_moves_generator(maxplayer(), field);
 
     if (possible_moves.size() == 0)
     {
+        std::clog << "No solution" << std::endl;
         return 8;
     }
 
@@ -789,6 +785,12 @@ std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int d
                 best_value = bv_returned;
                 best_move = move;
             }
+
+            uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            if (current_time >= final_time)
+            {
+                break;
+            }
         }
         return std::make_tuple(best_value, best_move);
     }
@@ -815,27 +817,28 @@ std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int d
                 best_value = bv_returned;
                 best_move = move;
             }
+
+            uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            if (current_time >= final_time)
+            {
+                break;
+            }
         }
         return std::make_tuple(best_value, best_move);
     }
 }
 
-int solve_minimax(const bool black, const std::string& state, std::string& result)
+int solve_minimax(const std::string& state, std::string& result, int depth)
 {
-    std::string position;
-    int depth = 5;
-    result;
-    black;
-
     std::vector<std::vector<char>> field = game_field_2d(state);
 
     int bv_returned;
     std::string bm_returned;
     std::tie(bv_returned, bm_returned) = minimax(field, depth, maxplayer());
-    bv_returned;
 
     if (bm_returned == "")
     {
+        std::clog << "No solution" << std::endl;
         return 8;
     }
 
@@ -843,36 +846,31 @@ int solve_minimax(const bool black, const std::string& state, std::string& resul
     return 0;
 }
 
-int solve(const bool black, const std::string& state, std::string& result)
+int solve(const std::string& state, std::string& result)
 {
-    int return_solve = solve_minimax(black, state, result);
-    std::cout << "solve result " << result << std::endl;
+    //int return_solve = solve_random(state, result);
+    int return_solve = solve_minimax(state, result, 4);
     return return_solve;
 }
 
 int main()
 {
-    srand(unsigned int(time(NULL)));
-    //srand(0);
+    //srand(unsigned int(time(NULL)));
+    srand(0);
 
     std::string command;
     std::string result;
 
     bool started = false;
     bool black = true;
-    int32_t time = 0;
+    int32_t time_given = 0;
     std::vector<std::string> command_tokens{};
 
-    started;
-    black;
-    time;
-    command_tokens;
-    bool random_start = false;
-    random_start;
+    //bool random_start = false;
     std::string random_game_state{ "" };
 
-    //while (std::getline(std::cin, command))
-    while (random_player(command, random_start, result, random_game_state, true))
+    while (std::getline(std::cin, command))
+    //while (random_player(command, random_start, result, random_game_state, true))
     {
         //std::string result;
         // process the command and fill result
@@ -885,7 +883,7 @@ int main()
 
         if (!started)
         {
-            int return_start = check_start(command_tokens, started, black, time);
+            int return_start = check_start(command_tokens, started, black, time_given);
             if (return_start != 0)
             {
                 return return_start;
@@ -897,12 +895,14 @@ int main()
         {
             if (command_tokens[0] == "MOVE" && command_tokens.size() == 2)
             {
+                uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                final_time = current_time + time_given * 1000 - 50;
+
                 int input_state = check_input_state(command_tokens[1]);
                 if (input_state == 0)
                 {
-                    int return_solve = solve(black, command_tokens[1], result);
+                    int return_solve = solve(command_tokens[1], result);
                     //std::cout << "result z mainu " << result << std::endl;
-                    return_solve;
                     if (return_solve != 0)
                     {
                         return return_solve;
@@ -919,11 +919,14 @@ int main()
             }
             else
             {
+                std::clog << "Not supported command" << std::endl;
                 return 10;
             }
         }
-
+        //uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        //std::cout << "current_time: " << current_time << std::endl;
         std::cout << result << std::endl;
     }
+    std::clog << "Unexpected exit from main function" << std::endl;
     return 1000;
 }
