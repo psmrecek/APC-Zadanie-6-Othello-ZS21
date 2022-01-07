@@ -619,15 +619,9 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         print_game_field(field);
         random_game_state = game_field_to_1d(field);
         command = move_command + delimeter_command + random_game_state;
-        //std::cout << "++++++++++++" << flipped_bot << " " << flipped_random << std::endl;
         std::cout << command << std::endl;
         return true;
     }
-    
-    //print_game_field(field);
-    
-
-    //test_place(random_game_state, bot_black, "E3");
 
     //// C1 C5
     //test_place_two("----------O------OOO------O-------------------------------------", bot_black, "C1", "C5");
@@ -670,7 +664,6 @@ int solve_random(const std::string& state, std::string& result)
 
     std::string maxmove{ "" };
     int maxflip = 0;
-    //std::tie(move, flip) = possible_moves[rand() % possible_moves.size()];
 
     for (size_t i = 0; i < possible_moves.size(); i++)
     {
@@ -750,7 +743,6 @@ bool gameOver(const std::vector<std::vector<char>> field)
     std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(true, field);
     std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(false, field);
     return (possible_moves_max.size() == 0 && possible_moves_min.size() == 0);
-
 }
 
 std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int depth, bool player)
@@ -855,8 +847,8 @@ int solve(const std::string& state, std::string& result)
 
 int main()
 {
-    //srand(unsigned int(time(NULL)));
-    srand(0);
+    srand(uint8_t(time(NULL)));
+    //srand(0);
 
     std::string command;
     std::string result;
@@ -865,21 +857,13 @@ int main()
     bool black = true;
     int32_t time_given = 0;
     std::vector<std::string> command_tokens{};
-
-    //bool random_start = false;
     std::string random_game_state{ "" };
 
-    while (std::getline(std::cin, command))
+    //bool random_start = false;
     //while (random_player(command, random_start, result, random_game_state, true))
+    while (std::getline(std::cin, command))
     {
-        //std::string result;
-        // process the command and fill result
         command_tokens = tokenize(command);
-
-        //for (const auto& str : command_tokens) {
-        //    std::cout << str << " ";
-        //}
-        //std::cout << std::endl;
 
         if (!started)
         {
@@ -898,11 +882,12 @@ int main()
                 uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 final_time = current_time + time_given * 1000 - 50;
 
+                //std::cout << "current_time: " << current_time << std::endl;
+
                 int input_state = check_input_state(command_tokens[1]);
                 if (input_state == 0)
                 {
                     int return_solve = solve(command_tokens[1], result);
-                    //std::cout << "result z mainu " << result << std::endl;
                     if (return_solve != 0)
                     {
                         return return_solve;
@@ -923,8 +908,10 @@ int main()
                 return 10;
             }
         }
+
         //uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         //std::cout << "current_time: " << current_time << std::endl;
+
         std::cout << result << std::endl;
     }
     std::clog << "Unexpected exit from main function" << std::endl;
