@@ -8,6 +8,8 @@
 #include <chrono>
 #include <thread>
 
+//static int heuristic_table[8][8] = { {4, -3, 2, 2, 2, 2, -3, 4}, {-3, -4, -1, -1, -1, -1, -4, -3}, {2, -1, 1, 0, 0, 1, -1, 2}, {2, -1, 0, 1, 1, 0, -1, 2}, {2, -1, 0, 1, 1, 0, -1, 2}, {2, -1, 1, 0, 0, 1, -1, 2}, {-3, -4, -1, -1, -1, -1, -4, -3}, {4, -3, 2, 2, 2, 2, -3, 4} };
+static int heuristic_table[8][8] = { {20, -3, 11, 8, 8, 11, -3, 20}, { -3, -7, -4, 1, 1, -4, -7, -3 }, { 11, -4, 2, 2, 2, 2, -4, 11 }, { 8, 1, 2, -3, -3, 2, 1, 8 }, { 8, 1, 2, -3, -3, 2, 1, 8 }, { 11, -4, 2, 2, 2, 2, -4, 11 }, { -3, -7, -4, 1, 1, -4, -7, -3 }, { 20, -3, 11, 8, 8, 11, -3, 20 } };
 std::string maxPlayer_string{ " " };
 std::string minPlayer_string{ " " };
 uint64_t final_time = 0;
@@ -44,33 +46,21 @@ bool minplayer()
     return true;
 }
 
-/// <summary>
-/// https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
-/// </summary>
-/// <param name="s"></param>
-/// <returns></returns>
 std::string ltrim(const std::string& s)
 {
+    // https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
     return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
 }
 
-/// <summary>
-/// https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
-/// </summary>
-/// <param name="s"></param>
-/// <returns></returns>
 std::string rtrim(const std::string& s)
 {
+    // https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
     return std::regex_replace(s, std::regex("\\s+$"), std::string(""));
 }
 
-/// <summary>
-/// https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
-/// </summary>
-/// <param name="s"></param>
-/// <returns></returns>
 std::string trim(const std::string& s)
 {
+    // https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
     return ltrim(rtrim(s));
 }
 
@@ -279,7 +269,7 @@ int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, co
 
     if (!check_result(result))
     {
-        std::cout << "chybny vstup " << "\"" << result << "\"" << std::endl;
+        std::clog << "chybny vstup " << "\"" << result << "\"" << std::endl;
         exit(0);
     }
 
@@ -579,7 +569,7 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         random_color = "B";
     }
 
-    std::string random_time_str{ "1" };
+    std::string random_time_str{ "20" };
 
     std::string start_command{ "START" };
     std::string move_command{ "MOVE" };
@@ -680,6 +670,14 @@ int solve_random(const std::string& state, std::string& result)
     return 0;
 }
 
+bool gameOver(const std::vector<std::vector<char>> field)
+{
+    std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(true, field);
+    std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(false, field);
+    return (possible_moves_max.size() == 0 && possible_moves_min.size() == 0);
+}
+
+// simple counting of coins
 void black_white_eval(const std::vector<std::vector<char>>& field, int& black, int& white, int& free)
 {
     black = 0;
@@ -706,12 +704,43 @@ void black_white_eval(const std::vector<std::vector<char>>& field, int& black, i
     }
 }
 
+// weight of field from static feights heuristic function
+void static_eval(const std::vector<std::vector<char>>& field, int& black, int& white, int& free)
+{
+    // https://courses.cs.washington.edu/courses/cse573/04au/Project/mini1/RUSSIA/Final_Paper.pdf
+
+    black = 0;
+    white = 0;
+    free = 0;
+
+    for (size_t i = 0; i < field.size(); i++)
+    {
+        for (size_t j = 0; j < field.size(); j++)
+        {
+            if (field[i][j] == 'X')
+            {
+                black += heuristic_table[i][j];
+            }
+            else if (field[i][j] == 'O')
+            {
+                white += heuristic_table[i][j];
+            }
+            else if (field[i][j] == '-')
+            {
+                free += heuristic_table[i][j];
+            }
+        }
+    }
+}
+
+// eval setting
 int minmax_heuristics(const std::vector<std::vector<char>>& field, bool player)
 {
     int black = 0;
     int white = 0;
     int free = 0;
-    black_white_eval(field, black, white, free);
+    //black_white_eval(field, black, white, free);
+    static_eval(field, black, white, free);
 
     if (maxplayer())
     {
@@ -735,16 +764,9 @@ int minmax_heuristics(const std::vector<std::vector<char>>& field, bool player)
             return +white;
         }
     }
-
 }
 
-bool gameOver(const std::vector<std::vector<char>> field)
-{
-    std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(true, field);
-    std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(false, field);
-    return (possible_moves_max.size() == 0 && possible_moves_min.size() == 0);
-}
-
+// basic algo
 std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int depth, bool player)
 {
     if (depth == 0 || gameOver(field))
@@ -820,13 +842,103 @@ std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int d
     }
 }
 
+// basic algo with pruning
+std::tuple<int, std::string> minimax_pruning(std::vector<std::vector<char>> field, int depth, bool player, int alpha, int beta)
+{
+    if (depth == 0 || gameOver(field))
+    {
+        return std::make_tuple(minmax_heuristics(field, player), "");
+    }
+
+    std::string best_move = "";
+
+    if (player == maxplayer())
+    {
+        int best_value = -10000;
+        std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(maxplayer(), field);
+
+        for (std::tuple<std::string, int> one_of_moves : possible_moves_max)
+        {
+            std::string move;
+            int flip;
+            std::tie(move, flip) = one_of_moves;
+
+            std::vector<std::vector<char>> field_copy(field);
+            apply_result(maxplayer(), field_copy, move);
+
+            int bv_returned;
+            std::string bm_returned;
+            std::tie(bv_returned, bm_returned) = minimax_pruning(field_copy, depth - 1, minplayer(), alpha, beta);
+
+            if (bv_returned > best_value)
+            {
+                best_value = bv_returned;
+                best_move = move;
+            }
+
+            alpha = std::max(alpha, bv_returned);
+            if (beta <= alpha)
+            {
+                break;
+            }
+
+            uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            if (current_time >= final_time)
+            {
+                break;
+            }
+        }
+        return std::make_tuple(best_value, best_move);
+    }
+    else
+    {
+        int best_value = 10000;
+        std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(minplayer(), field);
+
+        for (std::tuple<std::string, int> one_of_moves : possible_moves_min)
+        {
+            std::string move;
+            int flip;
+            std::tie(move, flip) = one_of_moves;
+
+            std::vector<std::vector<char>> field_copy(field);
+            apply_result(minplayer(), field_copy, move);
+
+            int bv_returned;
+            std::string bm_returned;
+            std::tie(bv_returned, bm_returned) = minimax_pruning(field_copy, depth - 1, maxplayer(), alpha, beta);
+
+            if (bv_returned < best_value)
+            {
+                best_value = bv_returned;
+                best_move = move;
+            }
+
+            beta = std::min(alpha, bv_returned);
+            if (beta <= alpha)
+            {
+                break;
+            }
+
+            uint64_t current_time = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            if (current_time >= final_time)
+            {
+                break;
+            }
+        }
+        return std::make_tuple(best_value, best_move);
+    }
+}
+
+// minmax version setting
 int solve_minimax(const std::string& state, std::string& result, int depth)
 {
     std::vector<std::vector<char>> field = game_field_2d(state);
 
     int bv_returned;
     std::string bm_returned;
-    std::tie(bv_returned, bm_returned) = minimax(field, depth, maxplayer());
+    //std::tie(bv_returned, bm_returned) = minimax(field, depth, maxplayer());
+    std::tie(bv_returned, bm_returned) = minimax_pruning(field, depth, maxplayer(), -10000, 10000);
 
     if (bm_returned == "")
     {
@@ -838,17 +950,18 @@ int solve_minimax(const std::string& state, std::string& result, int depth)
     return 0;
 }
 
+// depth setting
 int solve(const std::string& state, std::string& result)
 {
     //int return_solve = solve_random(state, result);
-    int return_solve = solve_minimax(state, result, 4);
+    int return_solve = solve_minimax(state, result, 5);
     return return_solve;
 }
 
 int main()
 {
     srand(uint8_t(time(NULL)));
-    //srand(0);
+    //srand(11);
 
     std::string command;
     std::string result;
@@ -860,7 +973,7 @@ int main()
     std::string random_game_state{ "" };
 
     //bool random_start = false;
-    //while (random_player(command, random_start, result, random_game_state, true))
+    //while (random_player(command, random_start, result, random_game_state, false))
     while (std::getline(std::cin, command))
     {
         command_tokens = tokenize(command);
