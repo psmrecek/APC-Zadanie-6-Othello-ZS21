@@ -6,6 +6,41 @@
 #include <regex>
 #include <time.h>
 
+std::string maxPlayer_string{ " " };
+std::string minPlayer_string{ " " };
+
+void set_global(std::string maximizing)
+{
+    if (maximizing == "B")
+    {
+        maxPlayer_string = "B";
+        minPlayer_string = "W";
+    }
+    else
+    {
+        maxPlayer_string = "W";
+        minPlayer_string = "B";
+    }
+}
+
+bool maxplayer()
+{
+    if (maxPlayer_string == "B")
+    {
+        return true;
+    }
+    return false;
+}
+
+bool minplayer()
+{
+    if (minPlayer_string == "W")
+    {
+        return false;
+    }
+    return true;
+}
+
 /// <summary>
 /// https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
 /// </summary>
@@ -120,6 +155,48 @@ int check_input_state(const std::string& state)
     return 0;
 }
 
+void evaluate(std::string& state, int& black, int& white, int& free)
+{
+    for (size_t i = 0; i < state.size(); i++)
+    {
+        if (state[i] == 'X')
+        {
+            black++;
+        }
+        else if (state[i] == 'O')
+        {
+            white++;
+        }
+        else if (state[i] == '-')
+        {
+            free++;
+        }
+    }
+}
+
+void print_evaluation(std::string random_game_state)
+{
+    int blackspots = 0;
+    int whitespots = 0;
+    int freespots = 0;
+
+    evaluate(random_game_state, blackspots, whitespots, freespots);
+
+    std::cout << "Black: " << blackspots << " White: " << whitespots << " Free: " << freespots << " Winner: ";
+    if (blackspots > whitespots)
+    {
+        std::cout << "Black" << std::endl;
+    }
+    if (whitespots > blackspots)
+    {
+        std::cout << "White" << std::endl;
+    }
+    if (blackspots == whitespots)
+    {
+        std::cout << "Tie" << std::endl;
+    }
+}
+
 std::vector<std::vector<char>> game_field_2d(const std::string& game_state)
 {
     std::vector<std::vector<char>> field;
@@ -161,11 +238,40 @@ void print_game_field(const std::vector<std::vector<char>>& field)
         std::cout << std::endl;
     }
     std::cout << std::endl;
+    print_evaluation(game_field_to_1d(field));
+}
+
+bool check_result(const std::string& result)
+{
+    if (result.length() < 2)
+    {
+        return false;
+    }
+
+    int letter = result[0] - 'A';
+    int number = result[1] - '1';
+
+    if (letter < 0 || letter > 7)
+    {
+        return false;
+    }
+    if (number < 0 || number > 7)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, const std::string& result)
 {
     int flipped = 0;
+
+    if (!check_result(result))
+    {
+        std::cout << "chybny vstup " << "\"" << result << "\"" << std::endl;
+        exit(0);
+    }
 
     int letter = result[0] - 'A';
     int number = result[1] - '1';
@@ -399,9 +505,9 @@ int apply_result(const bool bot_black, std::vector<std::vector<char>>& field, co
     return flipped;
 }
 
-std::vector<std::string> possible_moves_generator(const bool bot_black, const std::vector<std::vector<char>>& field)
+std::vector<std::tuple<std::string, int>> possible_moves_generator(const bool bot_black, const std::vector<std::vector<char>>& field)
 {
-    std::vector<std::string> possible_moves;
+    std::vector<std::tuple<std::string, int>> possible_moves;
     bot_black;
 
     for (char i = 0; i < 8; i++)
@@ -410,19 +516,19 @@ std::vector<std::string> possible_moves_generator(const bool bot_black, const st
         {
             if (field[i][j] == '-')
             {
-                std::vector<std::vector<char>> test_field = field;
+                std::vector<std::vector<char>> test_field(field);
                 char a = i + '1';
                 char b = j + 'A';
                 std::string test_move{ b, a };
                 
-                if (apply_result(bot_black, test_field, test_move))
+                int flips = apply_result(bot_black, test_field, test_move);
+                if (flips)
                 {
-                    possible_moves.push_back(test_move);
+                    possible_moves.push_back(std::make_tuple(test_move, flips));
                 }
             }
         }
     }
-
     
     return possible_moves;
 }
@@ -450,10 +556,8 @@ void test_place(const std::string& test_game_state, const bool bot_black, std::s
     std::cout << "+++++++++++++++++++++" << std::endl;
 }
 
-bool random_player(std::string& command, bool& random_start, const std::string& result, std::string& random_game_state)
+bool random_player(std::string& command, bool& random_start, const std::string& result, std::string& random_game_state, bool bot_black)
 {
-    bool bot_black = false;
-
     std::string bot_color{ "" };
     std::string random_color{ "" };
     bool random_black = !bot_black;
@@ -468,8 +572,6 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         bot_color = "W";
         random_color = "B";
     }
-
-
 
     std::string random_time_str{ "10" };
     int32_t random_time = 10;
@@ -496,15 +598,20 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
         std::vector<std::vector<char>> field = game_field_2d(random_game_state);
         int flipped_bot = apply_result(bot_black, field, result);
         flipped_bot;
-        std::vector<std::string> possible_moves = possible_moves_generator(random_black, field);
+        print_game_field(field);
+        std::vector<std::tuple<std::string, int>> possible_moves = possible_moves_generator(random_black, field);
         if (possible_moves.size() == 0)
         {
             command = "STOP";
             return true;
         }
-        int flipped_random = apply_result(random_black, field, possible_moves[rand() % possible_moves.size()]);
-        //std::cout << "random placing " << possible_moves[0] << std::endl;
+        std::string move;
+        int flip;
+        std::tie(move, flip) = possible_moves[rand() % possible_moves.size()];
+        int flipped_random = apply_result(random_black, field, move);
+        std::cout << "random placing " << move << std::endl;
         flipped_random;
+        print_game_field(field);
         random_game_state = game_field_to_1d(field);
         command = move_command + delimeter_command + random_game_state;
         //std::cout << "++++++++++++" << flipped_bot << " " << flipped_random << std::endl;
@@ -551,26 +658,202 @@ bool random_player(std::string& command, bool& random_start, const std::string& 
     return false;
 }
 
-int solve(const bool black, const std::string& state, std::string& result)
+int solve_random(const bool black, const std::string& state, std::string& result)
 {
     std::vector<std::vector<char>> field = game_field_2d(state);
 
-    std::vector<std::string> possible_moves = possible_moves_generator(black, field);
+    std::vector<std::tuple<std::string, int>> possible_moves = possible_moves_generator(black, field);
 
     if (possible_moves.size() == 0)
     {
         return 8;
     }
 
-    result = possible_moves[rand() % possible_moves.size()];
+    std::string move;
+    int flip;
+
+    std::string maxmove{ "" };
+    int maxflip = 0;
+    //std::tie(move, flip) = possible_moves[rand() % possible_moves.size()];
+
+    for (size_t i = 0; i < possible_moves.size(); i++)
+    {
+        std::tie(move, flip) = possible_moves[i];
+        if (flip > maxflip)
+        {
+            maxflip = flip;
+            maxmove = move;
+        }
+    }
+
+    result = move;
 
     return 0;
 }
 
-// O - white, X - black
+void black_white_eval(const std::vector<std::vector<char>>& field, int& black, int& white, int& free)
+{
+    black = 0;
+    white = 0;
+    free = 0;
+
+    for (size_t i = 0; i < field.size(); i++)
+    {
+        for (size_t j = 0; j < field.size(); j++)
+        {
+            if (field[i][j] == 'X')
+            {
+                black++;
+            }
+            else if (field[i][j] == 'O')
+            {
+                white++;
+            }
+            else if (field[i][j] == '-')
+            {
+                free++;
+            }
+        }
+    }
+}
+
+int minmax_heuristics(const std::vector<std::vector<char>>& field, bool player)
+{
+    int black = 0;
+    int white = 0;
+    int free = 0;
+    black_white_eval(field, black, white, free);
+
+    if (maxplayer())
+    {
+        if (player)
+        {
+            return +black;
+        }
+        else
+        {
+            return -white;
+        }
+    }
+    else
+    {
+        if (player)
+        {
+            return -black;
+        }
+        else
+        {
+            return +white;
+        }
+    }
+
+}
+
+bool gameOver(const std::vector<std::vector<char>> field)
+{
+    std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(true, field);
+    std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(false, field);
+    return (possible_moves_max.size() == 0 && possible_moves_min.size() == 0);
+
+}
+
+std::tuple<int, std::string> minimax(std::vector<std::vector<char>> field, int depth, bool player)
+{
+    if (depth == 0 || gameOver(field))
+    {
+        return std::make_tuple(minmax_heuristics(field, player), "");
+    }
+
+    std::string best_move = "";
+
+    if (player == maxplayer())
+    {
+        int best_value = -1000;
+        std::vector<std::tuple<std::string, int>> possible_moves_max = possible_moves_generator(maxplayer(), field);
+
+        for (std::tuple<std::string, int> one_of_moves : possible_moves_max)
+        {
+            std::string move;
+            int flip;
+            std::tie(move, flip) = one_of_moves;
+            
+            std::vector<std::vector<char>> field_copy(field);
+            apply_result(maxplayer(), field_copy, move);
+
+            int bv_returned;
+            std::string bm_returned;
+            std::tie(bv_returned, bm_returned) = minimax(field_copy, depth - 1, minplayer());
+          
+            if (bv_returned > best_value)
+            {
+                best_value = bv_returned;
+                best_move = move;
+            }
+        }
+        return std::make_tuple(best_value, best_move);
+    }
+    else
+    {
+        int best_value = 1000;
+        std::vector<std::tuple<std::string, int>> possible_moves_min = possible_moves_generator(minplayer(), field);
+
+        for (std::tuple<std::string, int> one_of_moves : possible_moves_min)
+        {
+            std::string move;
+            int flip;
+            std::tie(move, flip) = one_of_moves;
+
+            std::vector<std::vector<char>> field_copy(field);
+            apply_result(minplayer(), field_copy, move);
+
+            int bv_returned;
+            std::string bm_returned;
+            std::tie(bv_returned, bm_returned) = minimax(field_copy, depth - 1, maxplayer());
+
+            if (bv_returned < best_value)
+            {
+                best_value = bv_returned;
+                best_move = move;
+            }
+        }
+        return std::make_tuple(best_value, best_move);
+    }
+}
+
+int solve_minimax(const bool black, const std::string& state, std::string& result)
+{
+    std::string position;
+    int depth = 5;
+    result;
+    black;
+
+    std::vector<std::vector<char>> field = game_field_2d(state);
+
+    int bv_returned;
+    std::string bm_returned;
+    std::tie(bv_returned, bm_returned) = minimax(field, depth, maxplayer());
+    bv_returned;
+
+    if (bm_returned == "")
+    {
+        return 8;
+    }
+
+    result = bm_returned;
+    return 0;
+}
+
+int solve(const bool black, const std::string& state, std::string& result)
+{
+    int return_solve = solve_minimax(black, state, result);
+    std::cout << "solve result " << result << std::endl;
+    return return_solve;
+}
+
 int main()
 {
     srand(unsigned int(time(NULL)));
+    //srand(0);
 
     std::string command;
     std::string result;
@@ -585,19 +868,20 @@ int main()
     time;
     command_tokens;
     bool random_start = false;
+    random_start;
     std::string random_game_state{ "" };
 
     //while (std::getline(std::cin, command))
-    while (random_player(command, random_start, result, random_game_state))
+    while (random_player(command, random_start, result, random_game_state, true))
     {
         //std::string result;
         // process the command and fill result
         command_tokens = tokenize(command);
 
-        for (const auto& str : command_tokens) {
-            std::cout << str << " ";
-        }
-        std::cout << std::endl;
+        //for (const auto& str : command_tokens) {
+        //    std::cout << str << " ";
+        //}
+        //std::cout << std::endl;
 
         if (!started)
         {
@@ -606,6 +890,7 @@ int main()
             {
                 return return_start;
             }
+            set_global(command_tokens[1]);
             result = "1";
         }
         else
@@ -616,11 +901,12 @@ int main()
                 if (input_state == 0)
                 {
                     int return_solve = solve(black, command_tokens[1], result);
+                    //std::cout << "result z mainu " << result << std::endl;
                     return_solve;
-                    //if (return_solve != 0)
-                    //{
-                    //    return return_solve;
-                    //}
+                    if (return_solve != 0)
+                    {
+                        return return_solve;
+                    }
                 }
                 else
                 {
@@ -629,40 +915,6 @@ int main()
             }
             else if (command_tokens[0] == "STOP" && command_tokens.size() == 1)
             {
-                int blackspots = 0;
-                int whitespots = 0;
-                int freespots = 0;
-
-                for (size_t i = 0; i < random_game_state.size(); i++)
-                {
-                    if (random_game_state[i] == 'X')
-                    {
-                        blackspots++;
-                    }
-                    if (random_game_state[i] == 'O')
-                    {
-                        whitespots++;
-                    }
-                    if (random_game_state[i] == '-')
-                    {
-                        freespots++;
-                    }
-                }
-
-                std::cout << "Black: " << blackspots << " White: " << whitespots << " Free: " << freespots << std::endl << "Winner: ";
-                if (blackspots > whitespots)
-                {
-                    std::cout << "Black" << std::endl;
-                }
-                if (whitespots > blackspots)
-                {
-                    std::cout << "White" << std::endl;
-                }
-                if (blackspots == whitespots)
-                {
-                    std::cout << "Tie" << std::endl;
-                }
-
                 return 0;
             }
             else
@@ -670,11 +922,8 @@ int main()
                 return 10;
             }
         }
-        std::cout << result << std::endl;  
+
+        std::cout << result << std::endl;
     }
-
-    
-
-
     return 1000;
 }
